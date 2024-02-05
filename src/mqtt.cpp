@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cstring>
+#include <string>
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -44,7 +45,7 @@ namespace mqtt
         const uint16_t protocol_length = htons(4);
         const char protocol[4] = {'M', 'Q', 'T', 'T'};
         const uint8_t level = 0x04;
-        const uint8_t flags = 0x02;
+        const uint8_t flags = 0xC2;
         const uint16_t keep_alive = htons(60); // seconds
 
         // Technically variable
@@ -58,12 +59,36 @@ namespace mqtt
         int8_t return_code = -1;
     };
 
-    int connect(const char* ip)
+    void gethostbyname(const char* hostname, std::string& ip)
     {
+        ip.clear();
+
+        std::string command = "ping ";
+        command += hostname;
+
+        FILE* f = popen(command.c_str(), "r");
+
+        const int32_t BUFFER_SIZE = 64;
+        char buffer[BUFFER_SIZE];
+        memset(buffer, '\0', BUFFER_SIZE);
+        fread(buffer, BUFFER_SIZE, 1, f);
+        pclose(f);
+
+        ip = buffer + strlen(hostname) + 7;
+        ip = ip.substr(0, ip.find(')'));
+    }
+
+    int connect(const char* hostname, const char* username, const char* password)
+    {
+        std::string ip;
+        ip.clear();
+
+        gethostbyname(hostname, ip);
+
         struct sockaddr_in address;
         address.sin_family = AF_INET;
         address.sin_port = htons(MQTT_PORT);
-        inet_pton(AF_INET, (const char*)ip, &address.sin_addr);
+        inet_pton(AF_INET, ip.c_str(), &address.sin_addr);
 
         int sock = socket(AF_INET, SOCK_STREAM, 0);
         if(connect(sock, (struct sockaddr *)&address, sizeof(address)) != 0)
@@ -73,13 +98,24 @@ namespace mqtt
 
         header h;
         h.set_type(CONNECT);
-        h.remaining_length = sizeof(connect_header);
+        h.remaining_length = sizeof(connect_header) + strlen(username) + strlen(password) + 2*sizeof(uint16_t);
         ssize_t sent = send(sock, &h, sizeof(header), MSG_WAITALL);
         if(sent != sizeof(header)) return -1;
 
         connect_header ch;
         sent = send(sock, &ch, sizeof(connect_header), MSG_WAITALL);
         if(sent != sizeof(connect_header)) return -1;
+
+        uint16_t string_length = htons(strlen(username));
+        sent = send(sock, &string_length, sizeof(uint16_t), MSG_WAITALL);
+        if(sent != sizeof(uint16_t)) return -1;
+        sent = send(sock, username, strlen(username), MSG_WAITALL);
+        if(sent != strlen(username)) return -1;
+        string_length = htons(strlen(password));
+        sent = send(sock, &string_length, sizeof(uint16_t), MSG_WAITALL);
+        if(sent != sizeof(uint16_t)) return -1;
+        sent = send(sock, password, strlen(password), MSG_WAITALL);
+        if(sent != strlen(password)) return -1;
 
         connack_header ack;
         size_t returned = recv(sock, &h, sizeof(header), MSG_WAITALL);

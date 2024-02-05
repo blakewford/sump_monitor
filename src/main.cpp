@@ -8,6 +8,10 @@
 
 #define FULL_GAUGE_AREA 52400.0f
 
+#define MQTT_BROKER_HOSTNAME "homeassistant.local"
+#define MQTT_USERNAME ""
+#define MQTT_PASSWORD ""
+
 bool in_range(uint8_t value, uint8_t low, uint8_t high)
 {
     return (value >= low) && (value <= high);
@@ -77,7 +81,7 @@ int main()
         memset(buffer, '\0', BUFFER_SIZE);
         snprintf(buffer, BUFFER_SIZE, "%.0f", ((count/FULL_GAUGE_AREA)*100));
 
-        int sock = mqtt::connect("homeassistant.local");
+        int sock = mqtt::connect(MQTT_BROKER_HOSTNAME, MQTT_USERNAME, MQTT_PASSWORD);
         if(sock == -1) continue;
 
         mqtt::publish(sock, buffer);
