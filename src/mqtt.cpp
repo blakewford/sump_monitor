@@ -74,7 +74,8 @@ namespace mqtt
         fread(buffer, BUFFER_SIZE, 1, f);
         pclose(f);
 
-        ip = buffer + strlen(hostname) + 7;
+        ip = buffer;
+        ip = ip.substr(ip.find('(') + 1);
         ip = ip.substr(0, ip.find(')'));
     }
 

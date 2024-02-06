@@ -8,7 +8,7 @@
 
 #define FULL_GAUGE_AREA 52400.0f
 
-#define MQTT_BROKER_HOSTNAME "homeassistant.local"
+#define MQTT_BROKER_HOSTNAME "homeassistant"
 #define MQTT_USERNAME ""
 #define MQTT_PASSWORD ""
 
