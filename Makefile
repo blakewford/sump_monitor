@@ -1,4 +1,4 @@
-SRCS:=./src/main.cpp ./src/mqtt.cpp
+SRCS:=./src/main.cpp ./src/mqtt.cpp ./src/bmp.cpp
 sump_monitor: $(SRCS)
 	g++ -std=c++11 -gdwarf-4 -O2 $(SRCS) -o $@
 

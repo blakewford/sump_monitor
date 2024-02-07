@@ -4,12 +4,15 @@
 #include <string>
 #include <unistd.h>
 
+#include "bmp.h"
 #include "mqtt.h"
 
-#define FULL_GAUGE_AREA 52400.0f
+#define FULL_GAUGE_AREA 54000.0f
 #define HIGH_LEVEL_ALARM_PERCENTAGE 90.0f
 #define HIGH_LEVEL_DRAIN_CUTOFF 30 // seconds
 #define MINIMUM_REFILL_TIME    120 // seconds
+
+#define BLUE 0x0000FF // RGB
 
 #define MQTT_BROKER_HOSTNAME "homeassistant"
 #define MQTT_USERNAME ""
@@ -56,6 +59,8 @@ int main()
         int32_t count = 0;
         size_t pixels = w*h;
         uint8_t abgr[sizeof(uint32_t)]; // ANDROID_BITMAP_FORMAT_RGBA_8888
+
+        auto bitmap = bmp::create(w, h);
         while(pixels--)
         {
             read = fread(&p, sizeof(uint32_t), 1, capture);
@@ -67,17 +72,28 @@ int main()
             abgr[3] = p & 0xFF;
 
             if(abgr[0] != 0xFF) continue;
-            if(in_range(abgr[1], 0xFB, 0xFC)) // 0xFC, 252 Ideal
+
+            bool mark = false;
+            uint32_t pixel  = (abgr[3] << 16) | (abgr[2] <<  8) | abgr[1];
+            if(in_range(abgr[1], 0xFB, 0xFD)) // 0xFC, 252 Ideal
             {
-                if(in_range(abgr[2], 0x8C, 0xF0)) // Heavy gradient 140 - 240
+                if(in_range(abgr[2], 0x8C, 0xBA)) // Heavy gradient 140 - 186
                 {
-                    if(in_range(abgr[3], 0x14, 0x64)) // Heavy gradient 20 - 100
+                    if(in_range(abgr[3], 0x14, 0x72)) // Heavy gradient 20 - 114
                     {
+                        mark = true;
                         count++;
                     }
                 }
             }
+
+            if(mark)
+            {
+                pixel = BLUE;
+            }
+            bmp::append_pixel(&pixel, bitmap);
         }
+        bmp::close(bitmap);
 
         fclose(capture);
 

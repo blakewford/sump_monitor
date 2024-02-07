@@ -1,3 +1,5 @@
 build
 capture
+full
+*.bmp
 .vscode
