@@ -107,6 +107,7 @@ int main()
                 {
                     if((now - last_drain) > MINIMUM_REFILL_TIME) // We can't refill faster than this
                     {
+                        mqtt::publish(sock, "RUN_GRINDER");
                         last_drain = time(nullptr);
                     }
                 }
