@@ -7,6 +7,9 @@
 #include "mqtt.h"
 
 #define FULL_GAUGE_AREA 52400.0f
+#define HIGH_LEVEL_ALARM_PERCENTAGE 90.0f
+#define HIGH_LEVEL_DRAIN_CUTOFF 30 // seconds
+#define MINIMUM_REFILL_TIME    120 // seconds
 
 #define MQTT_BROKER_HOSTNAME "homeassistant"
 #define MQTT_USERNAME ""
@@ -29,6 +32,8 @@ int main()
 #endif
     command += CAPTURE_FILE;
 
+    time_t mark = 0;
+    time_t last_drain = time(nullptr);
     while(true)
     {
         sleep(5);
@@ -76,15 +81,42 @@ int main()
 
         fclose(capture);
 
+        float liquid_level_ratio = ((count/FULL_GAUGE_AREA)*100);
+
         const int32_t BUFFER_SIZE = 4;
         char buffer[BUFFER_SIZE];
         memset(buffer, '\0', BUFFER_SIZE);
-        snprintf(buffer, BUFFER_SIZE, "%.0f", ((count/FULL_GAUGE_AREA)*100));
+        snprintf(buffer, BUFFER_SIZE, "%.0f", liquid_level_ratio);
 
         int sock = mqtt::connect(MQTT_BROKER_HOSTNAME, MQTT_USERNAME, MQTT_PASSWORD);
         if(sock == -1) continue;
 
         mqtt::publish(sock, buffer);
+
+        if(liquid_level_ratio > HIGH_LEVEL_ALARM_PERCENTAGE)
+        {
+            if(mark == 0)
+            {
+                mark = time(nullptr);
+            }
+            else
+            {
+                time_t now = time(nullptr);
+                time_t diff = now - mark;
+                if(diff > HIGH_LEVEL_DRAIN_CUTOFF)
+                {
+                    if((now - last_drain) > MINIMUM_REFILL_TIME) // We can't refill faster than this
+                    {
+                        last_drain = time(nullptr);
+                    }
+                }
+            }
+        }
+        else
+        {
+            mark = 0;
+        }
+
         mqtt::disconnect(sock);
         close(sock);
     }
