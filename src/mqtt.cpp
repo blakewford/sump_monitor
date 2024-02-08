@@ -129,23 +129,19 @@ namespace mqtt
         return sock;
     }
 
-    struct publish_header
+    void publish(int sock, const char* topic, const char* message)
     {
-        const uint16_t topic_name_length = htons(6);
-        const char topic[6] = {'L', 'I', 'Q', 'U', 'I', 'D'};
-    };
-
-    void publish(int sock, const char* message)
-    {
+        size_t topic_length = strlen(topic);
         size_t payload_length = strlen(message);
 
         header h;
         h.set_type(PUBLISH);
-        h.remaining_length = sizeof(publish_header) + payload_length;
+        h.remaining_length = sizeof(uint16_t) + topic_length + payload_length;
         send(sock, &h, sizeof(header), MSG_WAITALL);
 
-        publish_header ph;
-        send(sock, &ph, sizeof(publish_header), MSG_WAITALL);
+        const uint16_t formatted_topic_length = htons(topic_length);
+        send(sock, &formatted_topic_length, sizeof(uint16_t), MSG_WAITALL);
+        send(sock, topic, topic_length, MSG_WAITALL);
         send(sock, message, payload_length, MSG_WAITALL);
     }
 

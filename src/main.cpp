@@ -8,9 +8,9 @@
 #include "mqtt.h"
 
 #define FULL_GAUGE_AREA 54000.0f
-#define HIGH_LEVEL_ALARM_PERCENTAGE 90.0f
-#define HIGH_LEVEL_DRAIN_CUTOFF 30 // seconds
-#define MINIMUM_REFILL_TIME    120 // seconds
+#define HIGH_LEVEL_ALARM_PERCENTAGE 84.0f
+#define HIGH_LEVEL_DRAIN_CUTOFF 6 // seconds
+#define MINIMUM_REFILL_TIME    90 // seconds
 
 #define BLUE 0x0000FF // RGB
 
@@ -39,7 +39,7 @@ int main()
     time_t last_drain = time(nullptr);
     while(true)
     {
-        sleep(5);
+        sleep(2);
 
         system(command.c_str());
 
@@ -107,7 +107,7 @@ int main()
         int sock = mqtt::connect(MQTT_BROKER_HOSTNAME, MQTT_USERNAME, MQTT_PASSWORD);
         if(sock == -1) continue;
 
-        mqtt::publish(sock, buffer);
+        mqtt::publish(sock, "LIQUID", buffer);
 
         if(liquid_level_ratio > HIGH_LEVEL_ALARM_PERCENTAGE)
         {
@@ -123,7 +123,7 @@ int main()
                 {
                     if((now - last_drain) > MINIMUM_REFILL_TIME) // We can't refill faster than this
                     {
-                        mqtt::publish(sock, "RUN_GRINDER");
+                        mqtt::publish(sock, "RUN_GRINDER", "");
                         last_drain = time(nullptr);
                     }
                 }
