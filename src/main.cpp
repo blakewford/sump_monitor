@@ -10,7 +10,7 @@
 #define FULL_GAUGE_AREA 54000.0f
 #define HIGH_LEVEL_ALARM_PERCENTAGE 84.0f
 #define HIGH_LEVEL_DRAIN_CUTOFF 6 // seconds
-#define MINIMUM_REFILL_TIME    90 // seconds
+#define MINIMUM_REFILL_TIME    60 // seconds
 
 #define BLUE 0x0000FF // RGB
 
