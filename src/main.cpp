@@ -11,6 +11,7 @@
 #define HIGH_LEVEL_ALARM_PERCENTAGE 84.0f
 #define HIGH_LEVEL_DRAIN_CUTOFF 6 // seconds
 #define MINIMUM_REFILL_TIME    60 // seconds
+#define MAX_RUN_TIME           20 // seconds
 
 #define BLUE 0x0000FF // RGB
 
@@ -131,6 +132,12 @@ int main()
         }
         else
         {
+            time_t now = time(nullptr);
+            time_t diff = now - last_drain;
+            if(diff > MAX_RUN_TIME)
+            {
+                mqtt::publish(sock, "STOP_GRINDER", "");
+            }
             mark = 0;
         }
 
