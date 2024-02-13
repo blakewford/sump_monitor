@@ -8,10 +8,12 @@
 #include "mqtt.h"
 
 #define FULL_GAUGE_AREA 54000.0f
-#define HIGH_LEVEL_ALARM_PERCENTAGE 84.0f
-#define HIGH_LEVEL_DRAIN_CUTOFF 6 // seconds
-#define MINIMUM_REFILL_TIME    60 // seconds
-#define MAX_RUN_TIME           20 // seconds
+#define HIGH_LEVEL_ALARM_PERCENTAGE 90.0f
+#define SECONDS_PER_ITERATION       2
+#define HIGH_LEVEL_DRAIN_ITERATIONS 4
+#define HIGH_LEVEL_DRAIN_CUTOFF     (HIGH_LEVEL_DRAIN_ITERATIONS*HIGH_LEVEL_DRAIN_ITERATIONS) // seconds
+#define MINIMUM_REFILL_TIME        60 // seconds
+#define MAX_RUN_TIME               20 // seconds
 
 #define BLUE 0x0000FF // RGB
 
@@ -40,7 +42,7 @@ int main()
     time_t last_drain = time(nullptr);
     while(true)
     {
-        sleep(2);
+        sleep(SECONDS_PER_ITERATION);
 
         system(command.c_str());
 
@@ -110,7 +112,7 @@ int main()
 
         mqtt::publish(sock, "LIQUID", buffer);
 
-        if(liquid_level_ratio > HIGH_LEVEL_ALARM_PERCENTAGE)
+        if(liquid_level_ratio > (HIGH_LEVEL_ALARM_PERCENTAGE-HIGH_LEVEL_DRAIN_CUTOFF))
         {
             if(mark == 0)
             {
