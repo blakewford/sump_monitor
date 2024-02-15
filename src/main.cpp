@@ -15,20 +15,33 @@
 #define MINIMUM_REFILL_TIME        60 // seconds
 #define MAX_RUN_TIME               20 // seconds
 
+#define LEVEL_MISS_THRESHOLD       5
+#define SECONDS_PER_HOUR           3600
+
 #define BLUE 0x0000FF // RGB
 
 #define MQTT_BROKER_HOSTNAME "homeassistant"
 #define MQTT_USERNAME ""
 #define MQTT_PASSWORD ""
 
+void stop_start_tuya()
+{
+#ifdef __ANDROID__
+    system("am force-stop com.tuya.smart");
+    sleep(SECONDS_PER_ITERATION);
+    system("am start -n com.tuya.smart/com.smart.ThingSplashActivity");
+    sleep(SECONDS_PER_ITERATION);
+    system("input tap 400 240");
+#endif
+}
+
 bool in_range(uint8_t value, uint8_t low, uint8_t high)
 {
     return (value >= low) && (value <= high);
 }
 
-int main()
+void* report(void*)
 {
-
 #ifdef __ANDROID__
     std::string command = "screencap > ";
     const char* CAPTURE_FILE = "/data/local/tmp/capture";
@@ -40,6 +53,7 @@ int main()
 
     time_t mark = 0;
     time_t last_drain = time(nullptr);
+    int32_t blank_count = 0;
     while(true)
     {
         sleep(SECONDS_PER_ITERATION);
@@ -143,8 +157,41 @@ int main()
             mark = 0;
         }
 
+        if(liquid_level_ratio == 0.0f)
+        {
+            blank_count++;
+            if(blank_count == LEVEL_MISS_THRESHOLD)
+            {
+                blank_count = 0;
+                // We probably did not navigate the menus right, retry
+                stop_start_tuya();
+            }
+        }
+        else
+        {
+            blank_count = 0;
+        }
+
         mqtt::disconnect(sock);
         close(sock);
+    }
+}
+
+int main()
+{
+    pthread_t thread;
+    pthread_create(&thread, nullptr, &report, nullptr);
+
+    int32_t count = 0;
+    while(true)
+    {
+        if(count % SECONDS_PER_HOUR == 0)
+        {
+            count = 0;
+            stop_start_tuya();
+        }
+        sleep(1);
+        count++;
     }
 
     return 0;
